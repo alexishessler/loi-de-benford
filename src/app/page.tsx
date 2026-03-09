@@ -1,101 +1,289 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Header from '@/components/Header';
+import FileUpload from '@/components/FileUpload';
+import DataPreview from '@/components/DataPreview';
+import BenfordChart from '@/components/BenfordChart';
+import ResultCard from '@/components/ResultCard';
+import LegalModal from '@/components/LegalModal';
+import type { ColumnInfo } from '@/lib/parse-file';
+import type { BenfordResult } from '@/lib/benford';
+
+type AppState = 'idle' | 'loading' | 'preview' | 'analyzing' | 'result';
+
+interface PreviewData {
+  headers: string[];
+  preview: string[][];
+  columns: ColumnInfo[];
+  numericColumns: string[];
+  stats: {
+    totalRows: number;
+    duplicatesRemoved: number;
+    emptyRowsRemoved: number;
+    format: string;
+  };
+  sheets?: string[];
+  data?: Record<string, unknown>[];
+}
+
+interface ResultData {
+  analysis: BenfordResult;
+  columnName: string;
+}
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <Suspense>
+      <HomeContent />
+    </Suspense>
+  );
+}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const [state, setState] = useState<AppState>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
+  const [resultData, setResultData] = useState<ResultData | null>(null);
+
+  // Auto-import from URL param (?url=...)
+  useEffect(() => {
+    const url = searchParams.get('url');
+    if (url) {
+      handleUrlImport(url);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleFileSelected = async (selectedFile: File) => {
+    setFile(selectedFile);
+    setError(null);
+    setState('loading');
+    setSelectedColumn(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const res = await fetch('/api/analyze', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+      setPreviewData(data);
+      setState('preview');
+
+      // Auto-select if only one numeric column
+      if (data.numericColumns.length === 1) {
+        setSelectedColumn(data.numericColumns[0]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setState('idle');
+    }
+  };
+
+  const handleUrlImport = async (url: string) => {
+    setError(null);
+    setState('loading');
+    setSelectedColumn(null);
+    setFile(null);
+
+    try {
+      const res = await fetch('/api/fetch-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+      setPreviewData(data);
+      setState('preview');
+
+      if (data.numericColumns.length === 1) {
+        setSelectedColumn(data.numericColumns[0]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setState('idle');
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!selectedColumn) return;
+    setError(null);
+    setState('analyzing');
+
+    try {
+      let res: Response;
+
+      if (previewData?.data) {
+        // Data already in memory (from URL import)
+        res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: previewData.data, column: selectedColumn }),
+        });
+      } else if (file) {
+        // Re-upload file with column selection
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('column', selectedColumn);
+        res = await fetch('/api/analyze', { method: 'POST', body: formData });
+      } else {
+        throw new Error('Aucun fichier ou données disponibles');
+      }
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+      setResultData({ analysis: data.analysis, columnName: selectedColumn });
+      setState('result');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setState('preview');
+    }
+  };
+
+  const handleReset = () => {
+    setState('idle');
+    setFile(null);
+    setPreviewData(null);
+    setSelectedColumn(null);
+    setResultData(null);
+    setError(null);
+  };
+
+  return (
+    <main className="flex flex-col min-h-screen bg-[var(--bg)]">
+      <Header />
+
+      <div className="flex-1 overflow-y-auto px-4 py-6 sm:py-10">
+        {/* Error */}
+        {error && (
+          <div className="max-w-2xl mx-auto mb-4 p-3 rounded-xl bg-[rgba(237,41,57,0.05)] border border-[rgba(237,41,57,0.15)] text-sm text-[var(--french-red)] animate-fade-in-up">
+            {error}
+          </div>
+        )}
+
+        {/* State: idle or loading */}
+        {(state === 'idle' || state === 'loading') && (
+          <FileUpload
+            onFileSelected={handleFileSelected}
+            onUrlSubmit={handleUrlImport}
+            loading={state === 'loading'}
+          />
+        )}
+
+        {/* State: preview */}
+        {state === 'preview' && previewData && (
+          <>
+            <DataPreview
+              headers={previewData.headers}
+              preview={previewData.preview}
+              columns={previewData.columns}
+              numericColumns={previewData.numericColumns}
+              selectedColumn={selectedColumn}
+              onSelectColumn={setSelectedColumn}
+              stats={previewData.stats}
+              sheets={previewData.sheets}
             />
-            Deploy now
-          </a>
+
+            {/* Action buttons */}
+            <div className="max-w-4xl mx-auto mt-6 flex items-center justify-between">
+              <button
+                onClick={handleReset}
+                className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                &larr; Nouveau fichier
+              </button>
+
+              <button
+                onClick={handleAnalyze}
+                disabled={!selectedColumn}
+                className="btn-primary px-6 py-2.5 text-sm flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Lancer l&apos;analyse Benford
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* State: analyzing */}
+        {state === 'analyzing' && (
+          <div className="max-w-2xl mx-auto text-center py-20 animate-fade-in-up">
+            <div className="w-12 h-12 mx-auto mb-4 border-3 border-[var(--french-blue)] border-t-transparent rounded-full animate-spin-slow" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Analyse de la distribution des premiers chiffres...
+            </p>
+          </div>
+        )}
+
+        {/* State: result */}
+        {state === 'result' && resultData && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <BenfordChart result={resultData.analysis} />
+            <ResultCard result={resultData.analysis} columnName={resultData.columnName} />
+
+            {/* Actions */}
+            <div className="flex items-center justify-center gap-4 pt-2">
+              {previewData && previewData.numericColumns.length > 1 && (
+                <button
+                  onClick={() => {
+                    setState('preview');
+                    setResultData(null);
+                    setSelectedColumn(null);
+                  }}
+                  className="text-xs text-[var(--french-blue)] hover:underline"
+                >
+                  Tester une autre colonne
+                </button>
+              )}
+              <button
+                onClick={handleReset}
+                className="btn-primary px-5 py-2 text-sm"
+              >
+                Nouvelle analyse
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="flex-shrink-0 bg-white border-t border-[var(--border)] px-4 py-3">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[var(--text-tertiary)] tracking-wide">
+              Propuls&eacute; par{' '}
+              <span className="font-medium text-[var(--text-secondary)]">Alexis</span>
+              {', '}
+              <span className="font-medium text-[var(--text-secondary)]">Mistral AI</span>
+              {' & '}
+              <span className="font-medium text-[var(--text-secondary)]">Data.gouv</span>
+            </span>
+            <span className="text-[var(--border)]">&middot;</span>
+            <LegalModal />
+          </div>
           <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href="https://www.arte.tv/fr/videos/097454-002-A/voyages-au-pays-des-maths/"
             target="_blank"
             rel="noopener noreferrer"
+            className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--french-red)] transition-colors"
           >
-            Read our docs
+            Documentaire Arte &rarr;
           </a>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
       </footer>
-    </div>
+    </main>
   );
 }

@@ -1,27 +1,256 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #F8F7F4;
+  --bg-warm: #F3F1EC;
+  --bg-card: #FFFFFF;
+  --bg-user: #EEF1FF;
+  --bg-code: #F5F4F0;
+  --text: #1C1C28;
+  --text-secondary: #6B6B78;
+  --text-tertiary: #A4A4B0;
+  --border: #E8E7E2;
+  --border-subtle: #F0EFEA;
+  --french-blue: #002395;
+  --french-red: #ED2939;
+  --green: #059669;
+  --orange: #D97706;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.18); }
+
+/* ─── Tricolor sword shimmer ─── */
+.tricolor-sword {
+  height: 2.5px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    var(--french-blue) 0%,
+    var(--french-blue) 30%,
+    #C0C0C8 42%,
+    #FFFFFF 50%,
+    #C0C0C8 58%,
+    var(--french-red) 70%,
+    var(--french-red) 100%
+  );
+}
+.tricolor-sword::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.7) 45%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(255, 255, 255, 0.7) 55%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Cards ─── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-elevated {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+}
+
+/* ─── Gradient text ─── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--french-blue) 0%, #3B5BDB 45%, var(--french-red) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Upload zone ─── */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--french-blue);
+  background: rgba(0, 35, 149, 0.03);
+}
+.upload-zone.drag-over {
+  transform: scale(1.01);
+  box-shadow: 0 0 0 4px rgba(0, 35, 149, 0.08);
+}
+
+/* ─── Column cards ─── */
+.col-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.col-card:hover {
+  border-color: rgba(0, 35, 149, 0.3);
+  box-shadow: var(--shadow-sm);
+}
+.col-card.selected {
+  border-color: var(--french-blue);
+  background: rgba(0, 35, 149, 0.04);
+  box-shadow: 0 0 0 3px rgba(0, 35, 149, 0.1);
+}
+
+/* ─── Result verdict ─── */
+.verdict-conforming {
+  background: rgba(5, 150, 105, 0.06);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  color: #059669;
+}
+.verdict-questionable {
+  background: rgba(217, 119, 6, 0.06);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+  color: #D97706;
+}
+.verdict-non-conforming {
+  background: rgba(237, 41, 57, 0.06);
+  border: 1px solid rgba(237, 41, 57, 0.2);
+  color: var(--french-red);
+}
+
+/* ─── Badges ─── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.badge-blue {
+  background: rgba(0, 35, 149, 0.06);
+  color: var(--french-blue);
+  border: 1px solid rgba(0, 35, 149, 0.12);
+}
+.badge-red {
+  background: rgba(237, 41, 57, 0.05);
+  color: var(--french-red);
+  border: 1px solid rgba(237, 41, 57, 0.1);
+}
+.badge-green {
+  background: rgba(5, 150, 105, 0.06);
+  color: var(--green);
+  border: 1px solid rgba(5, 150, 105, 0.12);
+}
+
+/* ─── Send / Action button ─── */
+.btn-primary {
+  background: linear-gradient(135deg, var(--french-blue) 0%, #1a3a9e 50%, var(--french-red) 100%);
+  background-size: 200% 200%;
+  background-position: 0% 50%;
+  border-radius: 12px;
+  transition: all 0.35s ease;
+  box-shadow: 0 2px 8px rgba(0, 35, 149, 0.2);
+  color: white;
+  font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) {
+  background-position: 100% 50%;
+  box-shadow: 0 4px 16px rgba(0, 35, 149, 0.3);
+}
+.btn-primary:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ─── Data table ─── */
+.data-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8rem;
+}
+.data-table th {
+  background: var(--bg-warm);
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table td.highlight {
+  background: rgba(0, 35, 149, 0.05);
+  font-weight: 500;
+}
+.data-table .first-digit {
+  color: var(--french-red);
+  font-weight: 700;
+}
+
+/* ─── Animations ─── */
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 35, 149, 0.15); }
+  50% { box-shadow: 0 0 0 6px rgba(0, 35, 149, 0); }
+}
+.avatar-ring {
+  animation: ring-pulse 3s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
 }
