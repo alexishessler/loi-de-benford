@@ -8,6 +8,7 @@ const ALLOWED_HOSTS = [
   'www.data.gouv.fr',
   'files.data.gouv.fr',
   'object.files.data.gouv.fr',
+  'raw.githubusercontent.com',
 ];
 
 export async function POST(req: NextRequest) {
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     );
     if (!isAllowed) {
       return NextResponse.json(
-        { error: 'Seules les URLs de data.gouv.fr sont autorisées' },
+        { error: 'Seules les URLs de data.gouv.fr et GitHub sont autorisées' },
         { status: 403 }
       );
     }
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     // Download file (10 MB limit)
     const response = await fetch(url, {
       headers: { 'User-Agent': 'LoiBenford/1.0' },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {
@@ -50,9 +51,9 @@ export async function POST(req: NextRequest) {
     }
 
     const contentLength = response.headers.get('content-length');
-    if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
+    if (contentLength && parseInt(contentLength) > 20 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'Fichier trop volumineux (max 10 Mo)' },
+        { error: 'Fichier trop volumineux (max 20 Mo)' },
         { status: 400 }
       );
     }

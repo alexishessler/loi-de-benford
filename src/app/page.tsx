@@ -8,6 +8,7 @@ import DataPreview from '@/components/DataPreview';
 import BenfordChart from '@/components/BenfordChart';
 import ResultCard from '@/components/ResultCard';
 import LegalModal from '@/components/LegalModal';
+import HowItWorksModal from '@/components/HowItWorksModal';
 import type { ColumnInfo } from '@/lib/parse-file';
 import type { BenfordResult } from '@/lib/benford';
 
@@ -163,6 +164,7 @@ function HomeContent() {
   return (
     <main className="flex flex-col min-h-screen bg-[var(--bg)]">
       <Header />
+      <HowItWorksModal />
 
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:py-10">
         {/* Error */}
@@ -231,6 +233,21 @@ function HomeContent() {
         {/* State: result */}
         {state === 'result' && resultData && (
           <div className="max-w-4xl mx-auto space-y-6">
+            {/* Column name header */}
+            <div className="text-center animate-fade-in-up">
+              <p className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider font-medium mb-1">
+                Analyse Benford
+              </p>
+              <h2 className="text-xl sm:text-2xl font-extrabold gradient-text">
+                {resultData.columnName}
+              </h2>
+              <p className="text-xs text-[var(--text-tertiary)] mt-1">
+                {resultData.analysis.totalNumbers.toLocaleString('fr-FR')} valeurs analys&eacute;es
+                {resultData.analysis.excludedCount > 0 && (
+                  <span> &middot; {resultData.analysis.excludedCount} exclues</span>
+                )}
+              </p>
+            </div>
             <BenfordChart result={resultData.analysis} />
             <ResultCard result={resultData.analysis} columnName={resultData.columnName} />
 
@@ -261,8 +278,8 @@ function HomeContent() {
 
       {/* Footer */}
       <footer className="flex-shrink-0 bg-white border-t border-[var(--border)] px-4 py-3">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 sm:gap-0">
+          <div className="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
             <span className="text-[10px] text-[var(--text-tertiary)] tracking-wide">
               Propuls&eacute; par{' '}
               <span className="font-medium text-[var(--text-secondary)]">Alexis</span>
@@ -278,7 +295,7 @@ function HomeContent() {
             href="https://www.arte.tv/fr/videos/097454-002-A/voyages-au-pays-des-maths/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--french-red)] transition-colors"
+            className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--french-red)] transition-colors text-center sm:text-right"
           >
             Documentaire Arte &rarr;
           </a>

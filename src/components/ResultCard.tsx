@@ -18,12 +18,12 @@ const VERDICT_CONFIG = {
       'Vos données suivent la distribution naturelle de Benford. C\'est le comportement attendu pour des données réelles (populations, surfaces, cours de bourse, etc.).',
   },
   questionable: {
-    label: 'Données douteuses',
+    label: 'Écarts notables',
     icon: '⚠',
     css: 'verdict-questionable',
     color: 'var(--orange)',
     explanation:
-      'La conformité est marginale. Cela peut indiquer des données partiellement manipulées, un échantillon trop petit, ou simplement un domaine où Benford ne s\'applique pas naturellement.',
+      'La distribution s\'écarte sensiblement de Benford. Cela peut venir de données arrondies, d\'un domaine restreint, ou mériter un examen plus approfondi.',
   },
   'non-conforming': {
     label: 'Non conforme',

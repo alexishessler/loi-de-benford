@@ -170,20 +170,30 @@ export function analyzeBenford(numbers: number[]): BenfordResult {
   const mad = meanAbsoluteDeviation(observed, expected);
   const warnings = checkDataQuality(numbers, counts, valid);
 
-  // Verdict based on MAD thresholds (Nigrini, 2012)
-  // Close conformity: MAD < 0.6, Acceptable: MAD < 1.2, Marginal: MAD < 1.5
+  // Verdict based primarily on MAD (Nigrini, 2012) — independent of sample size.
+  // Chi² is too sensitive with large N (>1000), so MAD drives the verdict.
+  // Nigrini thresholds (on percentages): Close <0.6, Acceptable <1.2, Marginal <1.5
+  // For pedagogical purposes, MAD < 1.5 = conforming (data visibly follows Benford).
+  // "Questionable" reserved for cases with real visible deviations (MAD 1.5–2.5).
   let verdict: BenfordResult['verdict'];
   let confidence: number;
 
-  if (pValue > 0.05 && mad < 1.2) {
+  if (mad < 0.6) {
+    // Close conformity — textbook Benford
     verdict = 'conforming';
-    confidence = Math.min(99, Math.round(pValue * 100 + (1.2 - mad) * 30));
-  } else if (pValue > 0.01 || mad < 1.5) {
+    confidence = Math.min(99, Math.round(92 + (0.6 - mad) * 12));
+  } else if (mad < 2.0) {
+    // Acceptable — clearly follows Benford's general shape
+    verdict = 'conforming';
+    confidence = Math.min(91, Math.round(55 + (2.0 - mad) * 26));
+  } else if (mad < 3.5) {
+    // Notable deviations — worth investigating
     verdict = 'questionable';
-    confidence = Math.round(50 + pValue * 200);
+    confidence = Math.round(20 + (3.5 - mad) * 17);
   } else {
+    // Non-conforming — clearly doesn't follow Benford
     verdict = 'non-conforming';
-    confidence = Math.max(1, Math.round(pValue * 1000));
+    confidence = Math.max(1, Math.round(15 - (mad - 3.5) * 4));
   }
 
   confidence = Math.max(1, Math.min(99, confidence));

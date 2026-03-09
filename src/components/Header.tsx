@@ -1,7 +1,6 @@
 'use client';
 
 import AppSwitcher from './AppSwitcher';
-import HowItWorksModal from './HowItWorksModal';
 
 export default function Header() {
   return (
@@ -31,7 +30,6 @@ export default function Header() {
           <div className="ml-auto flex items-center gap-2.5">
             <AppSwitcher />
             <span className="hidden sm:block w-px h-5 bg-[var(--border-subtle)]" />
-            <HowItWorksModal />
             <a
               href="https://github.com/alexishessler/loi-de-benford"
               target="_blank"
