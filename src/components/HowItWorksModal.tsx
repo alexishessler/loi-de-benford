@@ -107,7 +107,7 @@ export default function HowItWorksModal() {
     return (
       <button
         onClick={handleOpen}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-2 bg-white/95 backdrop-blur-sm rounded-full px-4 py-2.5 transition-all duration-300 hover:scale-105 active:scale-95 comprendre-glow border border-[var(--border-subtle)]"
+        className="fixed bottom-14 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-2 bg-white/95 backdrop-blur-sm rounded-full px-4 py-2.5 transition-all duration-300 hover:scale-105 active:scale-95 comprendre-glow border border-[var(--border-subtle)]"
       >
         <span className="text-lg">&#x1f4a1;</span>
         <span className="text-xs font-semibold text-[var(--text-secondary)]">
