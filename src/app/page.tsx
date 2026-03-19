@@ -71,9 +71,19 @@ function HomeContent() {
       formData.append('file', selectedFile);
 
       const res = await fetch('/api/analyze', { method: 'POST', body: formData });
-      const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const errData = JSON.parse(text);
+          throw new Error(errData.error || 'Erreur serveur');
+        } catch (e) {
+          if (e instanceof SyntaxError) throw new Error(`Erreur serveur (${res.status})`);
+          throw e;
+        }
+      }
+
+      const data = await res.json();
 
       setPreviewData(data);
       setState('preview');
@@ -100,9 +110,19 @@ function HomeContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
-      const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const errData = JSON.parse(text);
+          throw new Error(errData.error || 'Erreur serveur');
+        } catch (e) {
+          if (e instanceof SyntaxError) throw new Error(`Erreur serveur (${res.status})`);
+          throw e;
+        }
+      }
+
+      const data = await res.json();
 
       setPreviewData(data);
       setState('preview');
@@ -126,10 +146,12 @@ function HomeContent() {
 
       if (previewData?.data) {
         // Data already in memory (from URL import)
+        // Only send the selected column to avoid huge payloads
+        const slimData = previewData.data.map(row => ({ [selectedColumn]: row[selectedColumn] }));
         res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: previewData.data, column: selectedColumn }),
+          body: JSON.stringify({ data: slimData, column: selectedColumn }),
         });
       } else if (file) {
         // Re-upload file with column selection
@@ -141,9 +163,18 @@ function HomeContent() {
         throw new Error('Aucun fichier ou données disponibles');
       }
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const errData = JSON.parse(text);
+          throw new Error(errData.error || 'Erreur serveur');
+        } catch (e) {
+          if (e instanceof SyntaxError) throw new Error(`Erreur serveur (${res.status})`);
+          throw e;
+        }
+      }
 
+      const data = await res.json();
       setResultData({ analysis: data.analysis, columnName: selectedColumn });
       setState('result');
     } catch (err) {

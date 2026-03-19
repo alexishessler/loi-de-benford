@@ -62,6 +62,15 @@ export async function POST(req: NextRequest) {
     const pathParts = parsedUrl.pathname.split('/');
     const fileName = pathParts[pathParts.length - 1] || 'data.csv';
 
+    // Detect HTML responses (redirect pages, error pages, captchas)
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      return NextResponse.json(
+        { error: 'Le serveur a renvoyé une page HTML au lieu du fichier. L\'URL est peut-être invalide ou temporairement indisponible.' },
+        { status: 502 }
+      );
+    }
+
     const ext = fileName.toLowerCase().split('.').pop() || 'csv';
     let fileContent: string | ArrayBuffer;
 
@@ -69,6 +78,14 @@ export async function POST(req: NextRequest) {
       fileContent = await response.arrayBuffer();
     } else {
       fileContent = await response.text();
+
+      // Double-check: even without HTML content-type, the body might be HTML
+      if (typeof fileContent === 'string' && fileContent.trimStart().startsWith('<!')) {
+        return NextResponse.json(
+          { error: 'Le serveur a renvoyé une page HTML au lieu du fichier. L\'URL est peut-être invalide ou temporairement indisponible.' },
+          { status: 502 }
+        );
+      }
     }
 
     const parsed = await parseFile(fileContent, fileName);
